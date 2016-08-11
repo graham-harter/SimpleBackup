@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<SimpleBackup>
+  <Definition Name="Default" DestinationRootPath="C:\Users\ghart\Documents\Test">
+    <!--
+    <Folder Source="C:\Users\Graham\Documents\Test\Source1" DestinationName="Dest" />
+    <Folder Source="C:\Users\Graham\Documents\Test\Source2" DestinationName="Dest2" />
+    -->
+
+    <Folder Source="C:\Users\ghart\Documents\Test\Source1" DestinationName="Dest" />
+    <Folder Source="C:\Users\ghart\Documents\Test\Source2" DestinationName="Dest2" />
+  </Definition>
+</SimpleBackup>
