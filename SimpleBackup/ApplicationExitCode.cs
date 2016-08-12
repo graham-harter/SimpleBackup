@@ -12,7 +12,7 @@ namespace SimpleBackup
         UncaughtException = 1,
         InvalidCmdLineArguments = 2,
         BackupDefinitionFileNotFound = 3,
-        DestinationRootFolderAlreadyExists = 4,
-        ErrorCreatingDestinationRootFolder = 5,
+        DestinationFolderAlreadyExists = 4,
+        ErrorCreatingDestinationFolder = 5,
     }
 }

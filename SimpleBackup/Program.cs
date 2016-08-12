@@ -39,15 +39,19 @@ namespace SimpleBackup
                 var definitionReader = new BackupDefinitionReader();
                 var definition = definitionReader.Read(backupDefinitionFilename);
 
-                // Exit if the destination folder already exists.
-                CheckDestinationFolderDoesNotExist();
+                var destinationFolderPath = ComposeDestinationFolderPath(definition, destinationFolderName);
 
-                CreateDestinationFolder();
+                logger.Info("Backup destination folder is: \"{0}\"", destinationFolderPath);
+
+                // Exit if the destination folder already exists.
+                CheckDestinationFolderDoesNotExist(destinationFolderPath);
+
+                CreateDestinationFolder(destinationFolderPath);
 
                 logger.Info("The following files failed to copy:");
 
                 // Execute the backup
-                var executor = new BackupExecutor(destinationFolderName, definition);
+                var executor = new BackupExecutor(destinationFolderPath, definition);
                 executor.ExecuteBackup();
 
                 logger.Info("  {0} files failed to copy.", executor.NumberOfFilesWhichFailedToCopy);
@@ -67,7 +71,7 @@ namespace SimpleBackup
             if (args.Length == 0)
             {
                 ProgramControlHelper.ExitApplicationWithError(
-                    "Usage: SimpleBackup {dest-folder-path}",
+                    "Usage: SimpleBackup {dest-folder-name}",
                     (int)ApplicationExitCode.InvalidCmdLineArguments);
             }
 
@@ -84,27 +88,38 @@ namespace SimpleBackup
             }
         }
 
-        private void CheckDestinationFolderDoesNotExist()
+        private static string ComposeDestinationFolderPath(BackupDefinition definition, string destinationFolderName)
         {
-            if (Directory.Exists(destinationFolderName))
+            // The destination folder path is constructed from the destination root folder
+            // in the XML definition, plus the destination folder name specifed in the cmd-line.
+            var result = Path.Combine(
+                definition.DestinationRootPath,
+                destinationFolderName
+                );
+            return result;
+        }
+
+        private static void CheckDestinationFolderDoesNotExist(string destinationFolderPath)
+        {
+            if (Directory.Exists(destinationFolderPath))
             {
                 ProgramControlHelper.ExitApplicationWithError(
-                    string.Format("Error: Folder \"{0}\" already exists. Please specify a folder which does not exist.", destinationFolderName),
-                    (int)ApplicationExitCode.DestinationRootFolderAlreadyExists);
+                    string.Format("Error: Folder \"{0}\" already exists. Please specify a folder which does not exist.", destinationFolderPath),
+                    (int)ApplicationExitCode.DestinationFolderAlreadyExists);
             }
         }
 
-        private void CreateDestinationFolder()
+        private static void CreateDestinationFolder(string destinationFolderPath)
         {
             try
             {
-                Directory.CreateDirectory(destinationFolderName);
+                Directory.CreateDirectory(destinationFolderPath);
             }
             catch (Exception ex)
             {
                 ProgramControlHelper.ExitApplicationWithError(
-                    string.Format("Error creating destination folder \"{0}\": {1}", destinationFolderName, ex.Message),
-                    (int)ApplicationExitCode.ErrorCreatingDestinationRootFolder);
+                    string.Format("Error creating destination folder \"{0}\": {1}", destinationFolderPath, ex.Message),
+                    (int)ApplicationExitCode.ErrorCreatingDestinationFolder);
             }
         }
     }
