@@ -48,13 +48,13 @@ namespace SimpleBackup
 
                 CreateDestinationFolder(destinationFolderPath);
 
-                logger.Info("The following files failed to copy:");
+                logger.Info("The following files and folders failed to copy:");
 
                 // Execute the backup
                 var executor = new BackupExecutor(destinationFolderPath, definition);
                 executor.ExecuteBackup();
 
-                logger.Info("  {0} files failed to copy.", executor.NumberOfFilesWhichFailedToCopy);
+                LogNumberOfFailures(executor);
             }
             catch (Exception ex)
             {
@@ -120,6 +120,26 @@ namespace SimpleBackup
                 ProgramControlHelper.ExitApplicationWithError(
                     string.Format("Error creating destination folder \"{0}\": {1}", destinationFolderPath, ex.Message),
                     (int)ApplicationExitCode.ErrorCreatingDestinationFolder);
+            }
+        }
+
+        private static void LogNumberOfFailures(BackupExecutor executor)
+        {
+            var failures = executor.GetExecutionFailures();
+
+            if (failures.Count == 0)
+            {
+                logger.Info("There were no execution failures.");
+            }
+            else
+            {
+                logger.Info("The following execution failures occurred:");
+                var failureMessageProvider = new BackupExecutionFailureMessageProvider();
+                foreach (var failure in failures)
+                {
+                    string format = failureMessageProvider.GetFailureTypeFormatString(failure.Type);
+                    logger.Info(string.Concat("  ", string.Format(format, failure.NumberOfFailures)));
+                }
             }
         }
     }

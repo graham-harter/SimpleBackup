@@ -27,10 +27,13 @@ namespace SimpleBackup
 
         public int NumberOfFilesWhichFailedToCopy { get; private set; }
 
+        public int NumberOfFoldersAccessDenied { get; private set; }
+
         public void ExecuteBackup()
         {
-            // Reset the failure count;
+            // Reset the failure counts.
             this.NumberOfFilesWhichFailedToCopy = 0;
+            this.NumberOfFoldersAccessDenied = 0;
 
             foreach (var folderDefinition in this.definition.FolderDefinitions)
             {
@@ -43,12 +46,31 @@ namespace SimpleBackup
             }
         }
 
+        public IList<BackupExecutionFailure> GetExecutionFailures()
+        {
+            IList<BackupExecutionFailure> result = new List<BackupExecutionFailure>();
+
+            if (NumberOfFoldersAccessDenied > 0)
+            {
+                result.Add(new BackupExecutionFailure(
+                    BackupExecutionFailureType.FoldersAccessDenied,
+                    NumberOfFoldersAccessDenied));
+            }
+
+            if (NumberOfFilesWhichFailedToCopy > 0)
+                result.Add(new BackupExecutionFailure(
+                    BackupExecutionFailureType.FilesFailedToCopy,
+                    NumberOfFilesWhichFailedToCopy));
+
+            return result;
+        }
+
         private void CopyFolder(string sourceFolderPath, string destinationFolderPath)
         {
             var sourceFolder = new DirectoryInfo(sourceFolderPath);
 
             // Copy all files within the source folder.
-            CopyAllFilesInFolder(sourceFolder, destinationFolderPath);
+            if (!CopyAllFilesInFolder(sourceFolder, destinationFolderPath)) return;
 
             // Get all subfolders.
             IList<DirectoryInfo> subfolders = sourceFolder.GetDirectories();
@@ -77,13 +99,14 @@ namespace SimpleBackup
             }
         }
 
-        private void CopyAllFilesInFolder(DirectoryInfo sourceFolder, string destinationFolderPath)
+        private bool CopyAllFilesInFolder(DirectoryInfo sourceFolder, string destinationFolderPath)
         {
             // Get all files in the source folder.
-            IList<FileInfo> files = sourceFolder.GetFiles();
+            var getFilesResult = GetAllFilesInFolder(sourceFolder);
+            if (getFilesResult.Failed) return false;
 
             // Copy all files from the source to the destination.
-            foreach (var file in files)
+            foreach (var file in getFilesResult.Files)
             {
                 // Compose the source path.
                 string sourceFilePath = file.FullName;
@@ -100,6 +123,35 @@ namespace SimpleBackup
                     FileObjectCopyFailed(sourceFilePath, ex);
                 }
             }
+
+            return true;
+        }
+
+        private GetAllFilesInFolderResult GetAllFilesInFolder(DirectoryInfo sourceFolder)
+        {
+            IList<FileInfo> files;
+            try
+            {
+                files = sourceFolder.GetFiles();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Log the failure.
+                FolderAccessDenied(sourceFolder.FullName);
+
+                // Return the failure.
+                return new GetAllFilesInFolderResult(null, true);
+            }
+
+            // We succeeded, so return the result.
+            return new GetAllFilesInFolderResult(files, false);
+        }
+
+        private void FolderAccessDenied(string sourceFolderPath)
+        {
+            // Log the failure, and increment failure count.
+            logger.Info("  {0}\\ [Reason: Access denied]", sourceFolderPath);
+            this.NumberOfFoldersAccessDenied++;
         }
 
         private void FileObjectCopyFailed(string sourceFileObjectPath, Exception ex)
@@ -108,5 +160,20 @@ namespace SimpleBackup
             logger.Info("  {0} [Reason: {1}]", sourceFileObjectPath, ex.Message);
             this.NumberOfFilesWhichFailedToCopy++;
         }
+
+        #region Private class GetAllFilesInFolderResult
+        private sealed class GetAllFilesInFolderResult
+        {
+            public GetAllFilesInFolderResult(IList<FileInfo> files, bool failed)
+            {
+                Files = files;
+                Failed = failed;
+            }
+
+            public IList<FileInfo> Files { get; private set; }
+
+            public bool Failed { get; private set; }
+        }
+        #endregion // #region Private class GetAllFilesInFolderResult
     }
 }

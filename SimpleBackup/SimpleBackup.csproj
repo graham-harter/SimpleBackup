@@ -50,6 +50,9 @@
     <Compile Include="ApplicationExitCode.cs" />
     <Compile Include="BackupDefinition.cs" />
     <Compile Include="BackupDefinitionReader.cs" />
+    <Compile Include="BackupExecutionFailure.cs" />
+    <Compile Include="BackupExecutionFailureMessageProvider.cs" />
+    <Compile Include="BackupExecutionFailureType.cs" />
     <Compile Include="BackupExecutor.cs" />
     <Compile Include="BackupFolderDefinition.cs" />
     <Compile Include="Program.cs" />
